@@ -195,7 +195,10 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     }
   };
 
+  const formatCurrency = (val) => (typeof val === 'number' && !isNaN(val) ? val : 0).toLocaleString();
+
   const handleSelectProduct = async (prodId) => {
+    if (!prodId) return;
     try {
       await fetch(getApiUrl('/api/cart/add'), {
         method: 'POST',
@@ -588,12 +591,14 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
                       <span className="flex items-center gap-1.5"><Tag size={13} /> {campaignNudge.campaignTitle}</span>
                     </div>
                     <p className="text-[#F5F7FA] text-[11px]">{campaignNudge.reason}</p>
-                    <button
-                      onClick={() => handleSelectProduct(campaignNudge.recommendedProduct.id)}
-                      className="w-full py-1.5 bg-[#45D39A] text-[#08090B] font-bold text-[11px] rounded-lg hover:bg-[#45D39A]/90 transition"
-                    >
-                      + Add Item & Unlock Offer
-                    </button>
+                    {campaignNudge.recommendedProduct && (
+                      <button
+                        onClick={() => handleSelectProduct(campaignNudge.recommendedProduct.id)}
+                        className="w-full py-1.5 bg-[#45D39A] text-[#08090B] font-bold text-[11px] rounded-lg hover:bg-[#45D39A]/90 transition"
+                      >
+                        + Add Item & Unlock Offer
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -620,7 +625,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
                               <Plus size={12} />
                             </button>
                           </div>
-                          <span className="font-bold text-[#45D39A] text-sm">₹{(item.price * item.quantity).toLocaleString()}</span>
+                          <span className="font-bold text-[#45D39A] text-sm">₹{formatCurrency((item.price || 0) * (item.quantity || 1))}</span>
                         </div>
                       </div>
                     ))
@@ -631,23 +636,23 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
                 <div className="bg-[#0D0F12] p-4 rounded-xl border border-white/5 text-xs space-y-2 font-mono">
                   <div className="flex justify-between text-[#A2A8B3]">
                     <span>Subtotal</span>
-                    <span>₹{cartState.subtotal.toLocaleString()}</span>
+                    <span>₹{formatCurrency(cartState.subtotal)}</span>
                   </div>
                   {cartState.discountPercent > 0 && (
                     <div className="flex justify-between text-[#45D39A]">
                       <span>{cartState.discountPercent}% Merchant Discount</span>
-                      <span>−₹{cartState.discountAmount}</span>
+                      <span>−₹{formatCurrency(cartState.discountAmount)}</span>
                     </div>
                   )}
                   {cartState.warrantyAdded && (
                     <div className="flex justify-between text-[#7C8FFF]">
                       <span>Travel Protective Case</span>
-                      <span>+₹{cartState.warrantyAmount}</span>
+                      <span>+₹{formatCurrency(cartState.warrantyPrice || cartState.warrantyAmount)}</span>
                     </div>
                   )}
                   <div className="pt-2 border-t border-white/5 flex justify-between font-extrabold text-[#F5F7FA] text-base">
                     <span>TOTAL</span>
-                    <span className="text-[#45D39A]">₹{cartState.total.toLocaleString()}</span>
+                    <span className="text-[#45D39A]">₹{formatCurrency(cartState.finalTotal || cartState.subtotal || cartState.total)}</span>
                   </div>
                 </div>
 
@@ -656,7 +661,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
                   disabled={cartState.items.length === 0}
                   className="w-full h-12 rounded-xl bg-[#45D39A] hover:bg-[#45D39A]/90 text-[#08090B] font-extrabold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg"
                 >
-                  <span>View Full Cart & Checkout (₹{cartState.total.toLocaleString()})</span>
+                  <span>View Full Cart & Checkout (₹{formatCurrency(cartState.finalTotal || cartState.subtotal || cartState.total)})</span>
                   <ArrowRight size={16} />
                 </button>
               </div>

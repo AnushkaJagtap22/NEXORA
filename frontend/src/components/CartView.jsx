@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, Tag, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { getApiUrl } from '../config/apiConfig';
 
 export default function CartView() {
   const navigate = useNavigate();
@@ -12,19 +13,21 @@ export default function CartView() {
     discountAmount: 0,
     warrantyAdded: false,
     warrantyAmount: 0,
-    total: 0
+    finalTotal: 0
   });
 
   const [campaignNudge, setCampaignNudge] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const formatCurrency = (val) => (typeof val === 'number' && !isNaN(val) ? val : 0).toLocaleString();
+
   const fetchCart = async () => {
     try {
-      const res = await fetch('/api/cart');
+      const res = await fetch(getApiUrl('/api/cart'));
       const data = await res.json();
       if (data.cart) {
         setCartState(data.cart);
-        if (data.cart.items.length > 0) {
+        if (data.cart.items && data.cart.items.length > 0) {
           fetchRecommendations(data.cart.subtotal, data.cart.items);
         }
       }
@@ -37,7 +40,7 @@ export default function CartView() {
 
   const fetchRecommendations = async (subtotal, items) => {
     try {
-      const res = await fetch('/api/recommendations/contextual', {
+      const res = await fetch(getApiUrl('/api/recommendations/contextual'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: items[0]?.id || 'prod_002', cartItems: items, cartSubtotal: subtotal })
@@ -55,7 +58,7 @@ export default function CartView() {
 
   const handleUpdateQuantity = async (prodId, newQty) => {
     try {
-      await fetch('/api/cart/item', {
+      await fetch(getApiUrl('/api/cart/item'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: prodId, quantity: newQty })
@@ -68,7 +71,7 @@ export default function CartView() {
 
   const toggleSmartBundle = async () => {
     try {
-      await fetch('/api/cart/update', {
+      await fetch(getApiUrl('/api/cart/update'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ warrantyAdded: !cartState.warrantyAdded })
@@ -86,6 +89,8 @@ export default function CartView() {
       </div>
     );
   }
+
+  const grandTotal = cartState.finalTotal || cartState.subtotal || cartState.total || 0;
 
   return (
     <div className="space-y-8 animate-fade-in select-none pb-16 max-w-4xl mx-auto">
@@ -117,15 +122,17 @@ export default function CartView() {
                   <Tag size={14} /> <span>{campaignNudge.campaignTitle}</span>
                 </div>
                 <p className="text-[#F5F7FA] text-xs">{campaignNudge.reason}</p>
-                <button
-                  onClick={async () => {
-                    await fetch('/api/cart/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: campaignNudge.recommendedProduct.id, quantity: 1 }) });
-                    await fetchCart();
-                  }}
-                  className="w-full py-2 bg-[#45D39A] text-[#08090B] font-bold text-xs rounded-xl"
-                >
-                  + Add {campaignNudge.recommendedProduct.name} & Unlock Offer
-                </button>
+                {campaignNudge.recommendedProduct && (
+                  <button
+                    onClick={async () => {
+                      await fetch(getApiUrl('/api/cart/add'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: campaignNudge.recommendedProduct.id, quantity: 1 }) });
+                      await fetchCart();
+                    }}
+                    className="w-full py-2 bg-[#45D39A] text-[#08090B] font-bold text-xs rounded-xl"
+                  >
+                    + Add {campaignNudge.recommendedProduct.name} & Unlock Offer
+                  </button>
+                )}
               </div>
             )}
 
@@ -151,7 +158,7 @@ export default function CartView() {
                         <Plus size={13} />
                       </button>
                     </div>
-                    <span className="font-extrabold text-base text-[#45D39A]">₹{(item.price * item.quantity).toLocaleString()}</span>
+                    <span className="font-extrabold text-base text-[#45D39A]">₹{formatCurrency((item.price || 0) * (item.quantity || 1))}</span>
                   </div>
                 </div>
               ))}
@@ -175,29 +182,29 @@ export default function CartView() {
               <h3 className="font-bold text-sm text-[#F5F7FA] font-sans border-b border-white/5 pb-3">ORDER SUMMARY</h3>
               <div className="flex justify-between text-[#A2A8B3]">
                 <span>Subtotal</span>
-                <span>₹{cartState.subtotal.toLocaleString()}</span>
+                <span>₹{formatCurrency(cartState.subtotal)}</span>
               </div>
               {cartState.discountPercent > 0 && (
                 <div className="flex justify-between text-[#45D39A]">
                   <span>{cartState.discountPercent}% Merchant Discount</span>
-                  <span>−₹{cartState.discountAmount}</span>
+                  <span>−₹{formatCurrency(cartState.discountAmount)}</span>
                 </div>
               )}
               {cartState.warrantyAdded && (
                 <div className="flex justify-between text-[#7C8FFF]">
                   <span>Travel Protective Case</span>
-                  <span>+₹{cartState.warrantyAmount}</span>
+                  <span>+₹{formatCurrency(cartState.warrantyPrice || cartState.warrantyAmount || 499)}</span>
                 </div>
               )}
               <div className="pt-3 border-t border-white/5 flex justify-between font-extrabold text-[#F5F7FA] text-lg">
                 <span>TOTAL</span>
-                <span className="text-[#45D39A]">₹{cartState.total.toLocaleString()}</span>
+                <span className="text-[#45D39A]">₹{formatCurrency(grandTotal)}</span>
               </div>
               <button
                 onClick={() => navigate('/buyer/checkout')}
                 className="w-full h-12 rounded-xl bg-[#45D39A] hover:bg-[#45D39A]/90 text-[#08090B] font-extrabold text-xs flex items-center justify-center gap-2 transition"
               >
-                <span>Proceed to Checkout (₹{cartState.total.toLocaleString()})</span>
+                <span>Proceed to Checkout (₹{formatCurrency(grandTotal)})</span>
                 <ArrowRight size={16} />
               </button>
             </div>

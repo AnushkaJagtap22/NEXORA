@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ShoppingCart, Plus, CheckCircle2, ShieldCheck, Tag, Sparkles } from 'lucide-react';
+import { getApiUrl } from '../config/apiConfig';
 
 export default function ProductDetailView() {
   const { productId } = useParams();
@@ -11,8 +12,10 @@ export default function ProductDetailView() {
   const [recommendations, setRecommendations] = useState([]);
   const [added, setAdded] = useState(false);
 
+  const formatCurrency = (val) => (typeof val === 'number' && !isNaN(val) ? val : 0).toLocaleString();
+
   useEffect(() => {
-    fetch(`/api/products/${productId}`)
+    fetch(getApiUrl(`/api/products/${productId}`))
       .then(res => res.json())
       .then(data => {
         if (data.product) {
@@ -26,7 +29,7 @@ export default function ProductDetailView() {
 
   const fetchRecommendations = async (prodId) => {
     try {
-      const res = await fetch('/api/recommendations/contextual', {
+      const res = await fetch(getApiUrl('/api/recommendations/contextual'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: prodId })
@@ -39,8 +42,9 @@ export default function ProductDetailView() {
   };
 
   const handleAddToCart = async () => {
+    if (!product?.id) return;
     try {
-      await fetch('/api/cart/add', {
+      await fetch(getApiUrl('/api/cart/add'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: product.id, quantity: 1 })
@@ -96,7 +100,7 @@ export default function ProductDetailView() {
 
           <div className="space-y-4 pt-4 border-t border-white/5 font-mono">
             <div className="flex justify-between items-center">
-              <span className="text-2xl font-extrabold text-[#45D39A]">₹{product.price.toLocaleString()}</span>
+              <span className="text-2xl font-extrabold text-[#45D39A]">₹{formatCurrency(product.price)}</span>
               <span className="text-xs text-[#7C8FFF]">JSON-LD Index Status: 96%</span>
             </div>
 
@@ -130,14 +134,19 @@ export default function ProductDetailView() {
             {recommendations.map((rec, idx) => (
               <div key={idx} className="bg-[#0D0F12] p-4 rounded-xl border border-white/5 space-y-2 flex flex-col justify-between">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-mono text-[#7C8FFF] uppercase font-bold">{rec.type.replace(/_/g, ' ')}</span>
-                  <h4 className="font-bold text-xs text-[#F5F7FA]">{rec.product.name}</h4>
+                  <span className="text-[10px] font-mono text-[#7C8FFF] uppercase font-bold">{rec.type ? rec.type.replace(/_/g, ' ') : 'RECOMMENDED'}</span>
+                  <h4 className="font-bold text-xs text-[#F5F7FA]">{rec.product?.name}</h4>
                   <p className="text-[11px] text-[#A2A8B3] leading-relaxed font-sans">{rec.reason}</p>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-white/5 font-mono">
-                  <span className="font-bold text-xs text-[#45D39A]">₹{rec.product.price.toLocaleString()}</span>
+                  <span className="font-bold text-xs text-[#45D39A]">₹{formatCurrency(rec.product?.price)}</span>
                   <button
-                    onClick={() => { fetch('/api/cart/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: rec.product.id, quantity: 1 }) }); navigate('/buyer/cart'); }}
+                    onClick={() => {
+                      if (rec.product?.id) {
+                        fetch(getApiUrl('/api/cart/add'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productId: rec.product.id, quantity: 1 }) });
+                        navigate('/buyer/cart');
+                      }
+                    }}
                     className="px-2.5 py-1 bg-[#7C8FFF] text-[#08090B] font-bold text-[11px] rounded"
                   >
                     + Add
