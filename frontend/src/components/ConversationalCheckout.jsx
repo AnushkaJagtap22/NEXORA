@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Star, Check, UserCheck, Layers, TrendingUp, Zap, CheckCircle2, ArrowRight, Search, Plus, Minus, Trash2, Eye, X, Tag, ShoppingCart, ShieldCheck, Sparkles, MessageSquare, ChevronRight, PackageCheck, Gift, Award, Flame, Compass, Monitor } from 'lucide-react';
 import RazorpayModal from './RazorpayModal';
@@ -6,6 +6,7 @@ import { getApiUrl } from '../config/apiConfig';
 
 export default function ConversationalCheckout({ onTriggerPayment }) {
   const navigate = useNavigate();
+  const isAiSearching = useRef(false);
 
   const [gridTitle, setGridTitle] = useState('PRODUCT DISCOVERY');
   const [products, setProducts] = useState([]);
@@ -60,11 +61,16 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (catOverride = null, searchOverride = null) => {
+    if (isAiSearching.current) return;
+    const cat = catOverride !== null ? catOverride : selectedCategory;
+    const q = searchOverride !== null ? searchOverride : searchTerm;
     try {
-      const res = await fetch(getApiUrl(`/api/products?search=${encodeURIComponent(searchTerm)}&category=${selectedCategory}`));
+      const res = await fetch(getApiUrl(`/api/products?search=${encodeURIComponent(q)}&category=${cat}`));
       const data = await res.json();
-      if (data.products) setProducts(data.products);
+      if (data.products && data.products.length > 0) {
+        setProducts(data.products);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -88,11 +94,11 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
   const handleExecutePromptQuery = async (promptText) => {
     setLoading(true);
     setSearchTerm(promptText);
+    isAiSearching.current = true;
 
     // CLEAN STATE RESET (CRITICAL FIX)
     setActiveBundle(null);
     setRecommendations([]);
-    setProducts([]);
 
     try {
       const res = await fetch(getApiUrl('/api/ai-shopping/query'), {
@@ -122,24 +128,28 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
             actionLogs: [`Executing query: "${promptText}"`, `SQLite catalog search... ✓ ${data.products.length} matches`]
           }
         ]);
+      } else {
+        // Fallback: If AI returned 0 items, load top category items so UI is never 0 products
+        fetchProducts(selectedCategory, '');
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+      isAiSearching.current = false;
     }
   };
 
   useEffect(() => {
     fetchCart();
-    fetchProducts();
-
     const params = new URLSearchParams(window.location.search);
     const initialQuery = params.get('q');
     if (initialQuery) {
       handleExecutePromptQuery(initialQuery);
+    } else {
+      fetchProducts();
     }
-  }, [searchTerm, selectedCategory]);
+  }, []);
 
   const handleSendMessage = async (customText = null) => {
     const text = customText || inputMsg;
@@ -458,7 +468,12 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
                   {['ALL', 'Audio', 'Wearables', 'Keyboards', 'Accessories'].map(cat => (
                     <button
                       key={cat}
-                      onClick={() => setSelectedCategory(cat)}
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        setSearchTerm('');
+                        setGridTitle(cat === 'ALL' ? 'PRODUCT DISCOVERY' : `${cat.toUpperCase()} PRODUCTS`);
+                        fetchProducts(cat, '');
+                      }}
                       className={`px-3 py-1.5 rounded-lg transition ${selectedCategory === cat ? 'bg-[#7C8FFF] text-[#08090B] font-bold' : 'bg-[#111419] text-[#A2A8B3] hover:text-white'}`}
                     >
                       {cat}

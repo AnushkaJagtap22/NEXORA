@@ -508,22 +508,36 @@ app.get('/api/catalog/export', (req, res) => {
 // CATALOG & PRODUCT CRUD APIs WITH MERCHANT ISOLATION
 // ----------------------------------------------------
 app.get('/api/products', (req, res) => {
-  const { search, category, page = 1, limit = 20 } = req.query;
-  let sql = 'SELECT id, merchant_id as merchantId, name, price, stock, category, sku, image, description, agent_readiness as agentReadiness, status, json_ld as jsonLd FROM products WHERE 1=1';
+  const { search, category, page = 1, limit = 50 } = req.query;
+  let sql = 'SELECT id, merchant_id as merchantId, name, price, stock, category, sku, image, description, agent_readiness as agentReadiness, status, json_ld as jsonLd FROM products WHERE status = "ACTIVE"';
   const params = [];
-
-  if (search) {
-    sql += ' AND (LOWER(name) LIKE ? OR LOWER(sku) LIKE ?)';
-    params.push(`%${search.toLowerCase()}%`, `%${search.toLowerCase()}%`);
-  }
 
   if (category && category !== 'ALL') {
     sql += ' AND category = ?';
     params.push(category);
   }
 
+  if (search && search.trim()) {
+    const clean = search.trim().toLowerCase();
+    const fillerWords = new Set(['i', 'need', 'a', 'good', 'under', 'for', 'the', 'best', 'find', 'me', 'show', 'with', 'something', 'popular', 'gift', 'gifts']);
+    const words = clean.split(/\s+/).filter(w => !fillerWords.has(w) && !/^\d+$/.test(w) && w.length > 2);
+    
+    if (words.length > 0) {
+      const keywordConditions = words.map(() => '(LOWER(name) LIKE ? OR LOWER(category) LIKE ? OR LOWER(description) LIKE ?)').join(' OR ');
+      sql += ` AND (${keywordConditions})`;
+      words.forEach(w => {
+        const term = `%${w}%`;
+        params.push(term, term, term);
+      });
+    }
+  }
+
   sql += ' ORDER BY id ASC';
-  const rows = db.prepare(sql).all(...params).map(p => ({ ...p, jsonLd: JSON.parse(p.jsonLd) }));
+  const rows = db.prepare(sql).all(...params).map(p => {
+    let jsonLd = {};
+    try { jsonLd = typeof p.jsonLd === 'string' ? JSON.parse(p.jsonLd) : (p.jsonLd || {}); } catch(e) {}
+    return { ...p, jsonLd };
+  });
 
   const total = rows.length;
   const startIdx = (page - 1) * limit;
