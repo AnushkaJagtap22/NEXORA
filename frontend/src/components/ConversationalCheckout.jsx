@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Star, Check, UserCheck, Layers, TrendingUp, Zap, CheckCircle2, ArrowRight, Search, Plus, Minus, Trash2, Eye, X, Tag, ShoppingCart, ShieldCheck, Sparkles, MessageSquare, ChevronRight, PackageCheck, Gift, Award, Flame, Compass, Monitor } from 'lucide-react';
 import RazorpayModal from './RazorpayModal';
-import { getApiUrl } from '../config/apiConfig';
+import { getApiUrl, fetchWithRetry } from '../config/apiConfig';
 
 export default function ConversationalCheckout({ onTriggerPayment }) {
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const fetchCart = async () => {
     try {
-      const res = await fetch(getApiUrl('/api/cart'));
+      const res = await fetchWithRetry(getApiUrl('/api/cart'));
       const data = await res.json();
       if (data.cart) {
         setCartState(data.cart);
@@ -66,7 +66,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     const cat = catOverride !== null ? catOverride : selectedCategory;
     const q = searchOverride !== null ? searchOverride : searchTerm;
     try {
-      const res = await fetch(getApiUrl(`/api/products?search=${encodeURIComponent(q)}&category=${cat}`));
+      const res = await fetchWithRetry(getApiUrl(`/api/products?search=${encodeURIComponent(q)}&category=${cat}`));
       const data = await res.json();
       if (data.products && data.products.length > 0) {
         setProducts(data.products);
@@ -78,7 +78,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const fetchRecommendations = async (subtotal, items) => {
     try {
-      const res = await fetch(getApiUrl('/api/recommendations/contextual'), {
+      const res = await fetchWithRetry(getApiUrl('/api/recommendations/contextual'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: items[0]?.id || 'prod_002', cartItems: items, cartSubtotal: subtotal })
@@ -101,7 +101,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     setRecommendations([]);
 
     try {
-      const res = await fetch(getApiUrl('/api/ai-shopping/query'), {
+      const res = await fetchWithRetry(getApiUrl('/api/ai-shopping/query'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: promptText })
@@ -129,11 +129,20 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
           }
         ]);
       } else {
-        // Fallback: If AI returned 0 items, load top category items so UI is never 0 products
         fetchProducts(selectedCategory, '');
       }
     } catch (err) {
-      console.error(err);
+      console.error("[AIShopping] Server fetch error:", err);
+      setMessages(prev => [
+        ...prev,
+        {
+          sender: 'bot',
+          text: 'The backend server is waking up or temporarily busy. Please wait a few seconds and click search again!',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          actionLogs: ['Connecting to backend server...', '⚠️ Connection attempt failed. Auto-retrying...']
+        }
+      ]);
+      fetchProducts(selectedCategory, '');
     } finally {
       setLoading(false);
       isAiSearching.current = false;
