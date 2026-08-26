@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Star, Check, UserCheck, Layers, TrendingUp, Zap, CheckCircle2, ArrowRight, Search, Plus, Minus, Trash2, Eye, X, Tag, ShoppingCart, ShieldCheck, Sparkles, MessageSquare, ChevronRight, PackageCheck, Gift, Award, Flame, Compass, Monitor } from 'lucide-react';
 import RazorpayModal from './RazorpayModal';
-import { getApiUrl, fetchWithRetry } from '../config/apiConfig';
+import { apiClient } from '../api/apiClient';
 
 export default function ConversationalCheckout({ onTriggerPayment }) {
   const navigate = useNavigate();
@@ -50,8 +50,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const fetchCart = async () => {
     try {
-      const res = await fetchWithRetry(getApiUrl('/api/cart'));
-      const data = await res.json();
+      const data = await apiClient.get('/api/cart');
       if (data.cart) {
         setCartState(data.cart);
         fetchRecommendations(data.cart.subtotal, data.cart.items);
@@ -66,8 +65,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     const cat = catOverride !== null ? catOverride : selectedCategory;
     const q = searchOverride !== null ? searchOverride : searchTerm;
     try {
-      const res = await fetchWithRetry(getApiUrl(`/api/products?search=${encodeURIComponent(q)}&category=${cat}`));
-      const data = await res.json();
+      const data = await apiClient.get(`/api/products?search=${encodeURIComponent(q)}&category=${cat}`);
       if (data.products && data.products.length > 0) {
         setProducts(data.products);
       }
@@ -78,12 +76,11 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const fetchRecommendations = async (subtotal, items) => {
     try {
-      const res = await fetchWithRetry(getApiUrl('/api/recommendations/contextual'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: items[0]?.id || 'prod_002', cartItems: items, cartSubtotal: subtotal })
+      const data = await apiClient.post('/api/recommendations/contextual', {
+        productId: items[0]?.id || 'prod_002',
+        cartItems: items,
+        cartSubtotal: subtotal
       });
-      const data = await res.json();
       if (data.recommendations) setRecommendations(data.recommendations);
       if (data.campaignNudge) setCampaignNudge(data.campaignNudge);
     } catch (err) {
@@ -101,12 +98,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     setRecommendations([]);
 
     try {
-      const res = await fetchWithRetry(getApiUrl('/api/ai-shopping/query'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: promptText })
-      });
-      const data = await res.json();
+      const data = await apiClient.post('/api/ai-shopping/query', { message: promptText });
 
       if (data.products && data.products.length > 0) {
         setProducts(data.products);
@@ -174,12 +166,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
       const reqDisc = match ? parseInt(match[1]) : 15;
 
       try {
-        const res = await fetch(getApiUrl('/api/agent/negotiate'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ requestedDiscount: reqDisc, amount: cartState.subtotal })
-        });
-        const data = await res.json();
+        const data = await apiClient.post('/api/agent/negotiate', { requestedDiscount: reqDisc, amount: cartState.subtotal });
         setLoading(false);
 
         if (data.approved) {
@@ -219,11 +206,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
   const handleSelectProduct = async (prodId) => {
     if (!prodId) return;
     try {
-      await fetch(getApiUrl('/api/cart/add'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: prodId, quantity: 1 })
-      });
+      await apiClient.post('/api/cart/add', { productId: prodId, quantity: 1 });
       await fetchCart();
     } catch (err) {
       console.error(err);
@@ -234,11 +217,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     if (!activeBundle || !activeBundle.products) return;
     try {
       for (const prod of activeBundle.products) {
-        await fetch(getApiUrl('/api/cart/add'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId: prod.id, quantity: 1 })
-        });
+        await apiClient.post('/api/cart/add', { productId: prod.id, quantity: 1 });
       }
       await fetchCart();
     } catch (err) {
@@ -248,11 +227,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const handleUpdateQuantity = async (prodId, newQty) => {
     try {
-      await fetch(getApiUrl('/api/cart/item'), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: prodId, quantity: newQty })
-      });
+      await apiClient.patch('/api/cart/item', { productId: prodId, quantity: newQty });
       await fetchCart();
     } catch (err) {
       console.error(err);
@@ -261,11 +236,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const acceptPermittedDiscount = async (maxDisc) => {
     try {
-      await fetch(getApiUrl('/api/cart/update'), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discountPercent: maxDisc })
-      });
+      await apiClient.put('/api/cart/update', { discountPercent: maxDisc });
       setPendingOffer(null);
       await fetchCart();
     } catch (err) {
@@ -275,11 +246,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const toggleSmartBundle = async () => {
     try {
-      await fetch(getApiUrl('/api/cart/update'), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ warrantyAdded: !cartState.warrantyAdded })
-      });
+      await apiClient.put('/api/cart/update', { warrantyAdded: !cartState.warrantyAdded });
       await fetchCart();
     } catch (err) {
       console.error(err);

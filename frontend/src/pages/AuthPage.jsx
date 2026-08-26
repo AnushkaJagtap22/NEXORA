@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Store, ShoppingBag, ShieldCheck, Eye, EyeOff, ArrowRight, ArrowLeft, Lock, Mail, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { apiClient } from '../api/apiClient';
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -39,12 +40,7 @@ export default function AuthPage() {
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/auth/demo-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: role === 'AI_BUYER' ? 'AI_BUYER' : role })
-      });
-      const data = await res.json();
+      const data = await apiClient.post('/api/auth/demo-login', { role: role === 'AI_BUYER' ? 'AI_BUYER' : role });
 
       if (data.token && data.user) {
         localStorage.setItem('nexora_token', data.token);

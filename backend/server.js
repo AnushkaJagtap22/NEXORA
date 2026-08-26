@@ -79,7 +79,25 @@ if (campCount === 0) {
 
 // Standard Production Healthcheck Endpoint for Cloud Monitors (Render/Railway/Vercel)
 app.get('/health', (req, res) => {
-  return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString(), uptime: process.uptime() });
+});
+
+app.get('/health/ready', (req, res) => {
+  try {
+    const dbTest = db.prepare('SELECT 1 as alive').get();
+    const prodCount = db.prepare('SELECT COUNT(*) as count FROM products').get();
+    return res.status(200).json({
+      status: 'ready',
+      database: dbTest?.alive === 1 ? 'CONNECTED' : 'DISCONNECTED',
+      activeProductsCount: prodCount?.count || 0,
+      mistralConfigured: Boolean(process.env.MISTRAL_API_KEY),
+      razorpayConfigured: Boolean(process.env.RAZORPAY_KEY_ID),
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    return res.status(500).json({ status: 'not_ready', error: err.message });
+  }
 });
 
 // ----------------------------------------------------

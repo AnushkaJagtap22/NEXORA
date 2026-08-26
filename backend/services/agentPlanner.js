@@ -23,9 +23,26 @@ class AgentPlanner {
     else if (lowerQuery.includes('keyboard') || lowerQuery.includes('desk')) { searchCategory = 'Keyboards'; searchTerm = 'keyboard'; }
     else if (lowerQuery.includes('watch') || lowerQuery.includes('tracker') || lowerQuery.includes('wearable')) { searchCategory = 'Wearables'; searchTerm = 'watch'; }
     else if (lowerQuery.includes('camera') || lowerQuery.includes('stream') || lowerQuery.includes('webcam')) { searchCategory = 'Cameras'; searchTerm = 'camera'; }
-    else if (lowerQuery.includes('backpack') || lowerQuery.includes('bag') || lowerQuery.includes('travel') || lowerQuery.includes('trip')) { searchTerm = 'backpack'; }
-    else if (lowerQuery.includes('laptop') || lowerQuery.includes('coding')) { searchTerm = 'laptop'; }
-    else if (lowerQuery.includes('hiking') || lowerQuery.includes('outdoor')) { searchTerm = 'tracker'; }
+    else if (lowerQuery.includes('backpack') || lowerQuery.includes('bag') || lowerQuery.includes('travel') || lowerQuery.includes('trip')) { searchCategory = 'Accessories'; searchTerm = 'backpack'; }
+    else if (lowerQuery.includes('laptop') || lowerQuery.includes('coding') || lowerQuery.includes('macbook')) { searchCategory = 'Laptops'; searchTerm = 'laptop'; }
+    else if (lowerQuery.includes('hiking') || lowerQuery.includes('outdoor')) { searchCategory = 'Wearables'; searchTerm = 'tracker'; }
+
+    // Map AI category synonyms to database canonical categories ('Laptops', 'Audio', 'Wearables', 'Keyboards', 'Cameras', 'Accessories')
+    const categoryMap = {
+      'electronics': 'Laptops',
+      'computers': 'Laptops',
+      'pc': 'Laptops',
+      'luggage': 'Accessories',
+      'travel': 'Accessories',
+      'bags': 'Accessories',
+      'peripherals': 'Keyboards',
+      'audio equipment': 'Audio',
+      'gadgets': 'Wearables'
+    };
+
+    if (searchCategory && categoryMap[searchCategory.toLowerCase()]) {
+      searchCategory = categoryMap[searchCategory.toLowerCase()];
+    }
 
     console.log(`[AgentPlanner] PARSED INTENT: Category=${searchCategory || 'ALL'}, MaxPrice=${maxPrice || 'NONE'}, SearchTerm="${searchTerm}"`);
 
@@ -38,7 +55,7 @@ class AgentPlanner {
       limit: 50
     });
 
-    // If search term was too specific and yielded 0, retry broader category search
+    // If search term or specific category yielded 0, retry broader category search
     if (candidateProducts.length === 0 && searchCategory && searchCategory !== 'ALL') {
       candidateProducts = ProductRepository.getAll({
         category: searchCategory,
@@ -48,9 +65,33 @@ class AgentPlanner {
       });
     }
 
-    // Filter by max budget constraint if specified
+    // Fallback across ALL categories if initial search yielded 0
+    if (candidateProducts.length === 0) {
+      candidateProducts = ProductRepository.getAll({
+        search: searchTerm || null,
+        category: 'ALL',
+        merchantId,
+        status: 'ACTIVE',
+        limit: 50
+      });
+    }
+
+    // Ultimate Safety Net: If still 0 products, return top active catalog items
+    if (candidateProducts.length === 0) {
+      candidateProducts = ProductRepository.getAll({
+        category: 'ALL',
+        merchantId,
+        status: 'ACTIVE',
+        limit: 50
+      });
+    }
+
+    // Filter by max budget constraint if specified (with fallback if budget filter empties set)
     if (maxPrice && candidateProducts.length > 0) {
-      candidateProducts = candidateProducts.filter(p => p.price <= maxPrice);
+      const budgetFiltered = candidateProducts.filter(p => p.price <= maxPrice);
+      if (budgetFiltered.length > 0) {
+        candidateProducts = budgetFiltered;
+      }
     }
 
     console.log(`[AgentPlanner] DATABASE RESULTS: ${candidateProducts.length} items`);

@@ -28,10 +28,12 @@ import PolicySettingsView from './components/PolicySettingsView';
 import AuditTrailView from './components/AuditTrailView';
 import MerchantAICommerceView from './components/MerchantAICommerceView';
 import MerchantApprovalsView from './components/MerchantApprovalsView';
+import ServerWarmingBanner from './components/ServerWarmingBanner';
 
 export default function App() {
   return (
     <Router>
+      <ServerWarmingBanner />
       <Routes>
         {/* 1. PUBLIC ROUTES */}
         <Route path="/" element={<LandingPage />} />

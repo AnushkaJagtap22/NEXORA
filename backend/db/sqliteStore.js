@@ -183,6 +183,19 @@ for (const sql of tables) {
   }
 }
 
+const indexes = [
+  'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);',
+  'CREATE INDEX IF NOT EXISTS idx_products_status_category_price ON products(status, category, price);',
+  'CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);',
+  'CREATE INDEX IF NOT EXISTS idx_orders_merchant_id ON orders(merchant_id);',
+  'CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);',
+  'CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_events(timestamp);'
+];
+
+for (const sql of indexes) {
+  try { db.exec(sql); } catch (err) {}
+}
+
 // Add expires_at column to auth_tokens if it doesn't exist yet
 try {
   db.exec("ALTER TABLE auth_tokens ADD COLUMN expires_at TEXT;");

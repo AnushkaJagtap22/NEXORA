@@ -2,7 +2,7 @@ const { buildIntentPrompt } = require('../prompts/intentAgent');
 const ProductRepository = require('../db/repositories/ProductRepository');
 
 class MistralService {
-  static async queryMistralLLM(prompt, timeoutMs = 8000) {
+  static async queryMistralLLM(prompt, timeoutMs = 2500) {
     const apiKey = process.env.MISTRAL_API_KEY;
     if (!apiKey) {
       return { success: false, reason: 'MISTRAL_API_KEY_NOT_CONFIGURED' };
