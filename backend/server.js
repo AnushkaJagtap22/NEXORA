@@ -23,11 +23,7 @@ const { authLimiter, aiLimiter, checkoutLimiter, generalLimiter } = require('./m
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:5173']
-  : true;
-
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -1180,6 +1176,17 @@ if (fs.existsSync(distPath)) {
     if (req.path.startsWith('/api/')) return next();
     res.sendFile(path.join(distPath, 'index.html'));
   });
+}
+
+// AUTO-SEED DATABASE IF EMPTY ON CONTAINER STARTUP
+try {
+  const prodCount = db.prepare('SELECT COUNT(*) as count FROM products').get();
+  if (!prodCount || prodCount.count === 0) {
+    console.log('[ServerStartup] Products table is empty. Executing runSeed()...');
+    runSeed();
+  }
+} catch (e) {
+  console.error('[ServerStartup] Auto-seed check error:', e.message);
 }
 
 app.listen(PORT, () => {
