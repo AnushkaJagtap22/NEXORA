@@ -24,6 +24,7 @@ class AgentPlanner {
     else if (lowerQuery.includes('watch') || lowerQuery.includes('tracker') || lowerQuery.includes('wearable')) { searchCategory = 'Wearables'; searchTerm = 'watch'; }
     else if (lowerQuery.includes('camera') || lowerQuery.includes('stream') || lowerQuery.includes('webcam')) { searchCategory = 'Cameras'; searchTerm = 'camera'; }
     else if (lowerQuery.includes('backpack') || lowerQuery.includes('bag') || lowerQuery.includes('travel') || lowerQuery.includes('trip')) { searchCategory = 'Accessories'; searchTerm = 'backpack'; }
+    else if (lowerQuery.includes('shoe') || lowerQuery.includes('sneaker') || lowerQuery.includes('footwear')) { searchCategory = 'Footwear'; searchTerm = 'shoe'; }
     else if (lowerQuery.includes('laptop') || lowerQuery.includes('coding') || lowerQuery.includes('macbook')) { searchCategory = 'Laptops'; searchTerm = 'laptop'; }
     else if (lowerQuery.includes('hiking') || lowerQuery.includes('outdoor')) { searchCategory = 'Wearables'; searchTerm = 'tracker'; }
 

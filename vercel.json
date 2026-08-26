@@ -1,8 +1,7 @@
 {
-  "version": 2,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.js" },
-    { "source": "/query", "destination": "/api/index.js" },
+    { "source": "/api/:path*", "destination": "https://nexora-backend.onrender.com/api/:path*" },
+    { "source": "/query", "destination": "https://nexora-backend.onrender.com/query" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

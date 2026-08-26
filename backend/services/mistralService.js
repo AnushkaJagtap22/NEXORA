@@ -67,6 +67,7 @@ class MistralService {
     else if (msg.includes('headphone') || msg.includes('audio') || msg.includes('sound')) category = 'Audio';
     else if (msg.includes('keyboard') || msg.includes('mouse') || msg.includes('desk')) category = 'Keyboards';
     else if (msg.includes('travel') || msg.includes('bag') || msg.includes('backpack') || msg.includes('trip')) category = 'Accessories';
+    else if (msg.includes('shoe') || msg.includes('sneaker') || msg.includes('footwear')) category = 'Footwear';
     else if (msg.includes('wearable') || msg.includes('watch')) category = 'Wearables';
     else if (msg.includes('camera') || msg.includes('webcam')) category = 'Cameras';
 

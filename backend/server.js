@@ -23,7 +23,19 @@ const { authLimiter, aiLimiter, checkoutLimiter, generalLimiter } = require('./m
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: (origin, callback) => callback(null, true), credentials: true }));
+const allowedOrigins = new Set([
+  'https://nexora-nine-blush.vercel.app',
+  process.env.FRONTEND_ORIGIN
+].filter(Boolean));
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.has(origin) || (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost(?::\d+)?$/.test(origin))) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS origin is not allowed'));
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -67,15 +79,7 @@ try {
 }
 
 // Initialize SQLite DB if empty
-const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get();
-if (!productCount || productCount.count === 0) {
-  console.log("Relational database empty. Running seed...");
-  runSeed();
-}
-const campCount = db.prepare('SELECT COUNT(*) as count FROM campaigns').get().count;
-if (campCount === 0) {
-  runSeed();
-}
+runSeed();
 
 // Standard Production Healthcheck Endpoint for Cloud Monitors (Render/Railway/Vercel)
 app.get('/health', (req, res) => {
@@ -86,10 +90,14 @@ app.get('/health/ready', (req, res) => {
   try {
     const dbTest = db.prepare('SELECT 1 as alive').get();
     const prodCount = db.prepare('SELECT COUNT(*) as count FROM products').get();
+    const inventoryCount = db.prepare('SELECT COALESCE(SUM(stock), 0) as count FROM products').get();
+    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
     return res.status(200).json({
       status: 'ready',
       database: dbTest?.alive === 1 ? 'CONNECTED' : 'DISCONNECTED',
       activeProductsCount: prodCount?.count || 0,
+      inventoryUnits: inventoryCount?.count || 0,
+      userCount: userCount?.count || 0,
       mistralConfigured: Boolean(process.env.MISTRAL_API_KEY),
       razorpayConfigured: Boolean(process.env.RAZORPAY_KEY_ID),
       uptime: process.uptime(),
@@ -117,6 +125,9 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/api/ready', (req, res) => {
+  const productCount = db.prepare('SELECT COUNT(*) as count FROM products').get().count;
+  const inventoryUnits = db.prepare('SELECT COALESCE(SUM(stock), 0) as count FROM products').get().count;
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   return res.json({
     success: true,
     ready: true,
@@ -125,6 +136,7 @@ app.get('/api/ready', (req, res) => {
       mistral: process.env.MISTRAL_API_KEY ? 'UP' : 'FALLBACK_MODE',
       razorpay: 'TEST_MODE'
     },
+    database: { type: 'SQLite', productCount, inventoryUnits, userCount },
     requestId: req.requestId
   });
 });
@@ -238,16 +250,21 @@ app.post('/api/auth/demo-login', (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   const { email, password, role } = req.body;
-
-  let targetRole = 'MERCHANT';
-  if (role) {
-    targetRole = role === 'AI_BUYER' || role === 'BUYER' ? 'AI_BUYER' : (role === 'ADMIN' ? 'ADMIN' : 'MERCHANT');
-  } else if (email) {
-    if (email.includes('buyer')) targetRole = 'AI_BUYER';
-    else if (email.includes('admin')) targetRole = 'ADMIN';
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: 'Email and password are required.' });
   }
 
-  const user = DEMO_USERS[targetRole] || DEMO_USERS.MERCHANT;
+  const requestedRole = role === 'BUYER' ? 'AI_BUYER' : role;
+  const user = db.prepare(`
+    SELECT id, name, email, role, merchant_id as merchantId, buyer_id as buyerId, avatar, password_hash as passwordHash
+    FROM users WHERE LOWER(email) = LOWER(?)
+  `).get(email.trim());
+  const passwordMatches = user && user.passwordHash === hashPassword(password);
+  const roleMatches = !requestedRole || user?.role === requestedRole;
+  if (!passwordMatches || !roleMatches) {
+    return res.status(401).json({ success: false, error: 'Invalid email, password, or role.' });
+  }
+  delete user.passwordHash;
   const { accessToken, refreshToken } = generateTokenPair(user);
 
   res.cookie('nexora_access_token', accessToken, {

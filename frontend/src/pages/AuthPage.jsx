@@ -40,7 +40,7 @@ export default function AuthPage() {
     setErrorMsg('');
 
     try {
-      const data = await apiClient.post('/api/auth/demo-login', { role: role === 'AI_BUYER' ? 'AI_BUYER' : role });
+      const data = await apiClient.post('/api/auth/login', { email, password, role });
 
       if (data.token && data.user) {
         localStorage.setItem('nexora_token', data.token);

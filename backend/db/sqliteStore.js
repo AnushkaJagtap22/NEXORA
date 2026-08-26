@@ -7,7 +7,11 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const dbPath = path.join(dataDir, 'nexora.sqlite');
+const dbPath = process.env.DATABASE_PATH || path.join(dataDir, 'nexora.sqlite');
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 const db = new Database(dbPath);
 
 // Enable WAL Mode for Concurrent Writes
@@ -200,5 +204,9 @@ for (const sql of indexes) {
 try {
   db.exec("ALTER TABLE auth_tokens ADD COLUMN expires_at TEXT;");
 } catch (e) {}
+
+// Bring databases created by the first schema migration up to the current user shape.
+try { db.exec('ALTER TABLE users ADD COLUMN buyer_id TEXT;'); } catch (e) {}
+try { db.exec('ALTER TABLE users ADD COLUMN avatar TEXT;'); } catch (e) {}
 
 module.exports = db;
