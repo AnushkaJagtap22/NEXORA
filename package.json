@@ -1,0 +1,23 @@
+{
+  "name": "nexora",
+  "version": "1.0.0",
+  "description": "Nexora - Agentic Commerce Infrastructure",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "cd backend && npm install",
+    "test": "cd backend && node tests/phase1_test.js && node tests/phase2_test.js && node tests/phase3_test.js && node tests/phase4_production_test.js && node tests/phase5_public_launch_test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
