@@ -1,13 +1,13 @@
 // Centralized Production API Client for Nexora Infrastructure
 // Resolves production base URL, handles retries, timeout, cold-start detection, and error normalization.
 
-const VITE_API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://nexora-backend.onrender.com' : '');
+const VITE_API_URL = import.meta.env.VITE_API_URL || '';
 
 export function getApiUrl(path) {
   if (!path) return VITE_API_URL;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${VITE_API_URL}${cleanPath}`;
+  return VITE_API_URL ? `${VITE_API_URL}${cleanPath}` : cleanPath;
 }
 
 export class ApiError extends Error {

@@ -1,10 +1,8 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/ai-shopping/query", "destination": "https://nexora-backend.onrender.com/api/ai-shopping/query" },
-    { "source": "/api/query", "destination": "https://nexora-backend.onrender.com/api/ai-shopping/query" },
-    { "source": "/query", "destination": "https://nexora-backend.onrender.com/api/ai-shopping/query" },
-    { "source": "/api/:path*", "destination": "https://nexora-backend.onrender.com/api/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/query", "destination": "/api/index.js" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
