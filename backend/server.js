@@ -1288,6 +1288,10 @@ try {
   console.error('[ServerStartup] Auto-seed check error:', e.message);
 }
 
-app.listen(PORT, () => {
-  console.log(`Nexora Relational SQLite Express Server running on port ${PORT}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Nexora Relational SQLite Express Server running on port ${PORT}`);
+  });
+}
