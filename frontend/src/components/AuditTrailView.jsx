@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, ShieldCheck, ChevronDown, Check, Sparkles, Terminal, ArrowRight, PlayCircle } from 'lucide-react';
+import { apiClient } from '../api/apiClient';
 
 export default function AuditTrailView() {
   const [logs, setLogs] = useState([]);
@@ -7,8 +8,7 @@ export default function AuditTrailView() {
   const [showTechnical, setShowTechnical] = useState(false);
 
   useEffect(() => {
-    fetch('/api/audit')
-      .then(res => res.json())
+    apiClient.get('/api/audit')
       .then(data => {
         if (data.logs) {
           const mappedLogs = data.logs.slice(0, 50).map((l, idx) => ({

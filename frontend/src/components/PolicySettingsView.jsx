@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, ChevronDown, Check, Sliders, AlertCircle, Lock, ShieldAlert, Zap, AlertTriangle } from 'lucide-react';
+import { apiClient } from '../api/apiClient';
 
 export default function PolicySettingsView() {
   const [policies, setPolicies] = useState({
@@ -25,11 +26,11 @@ export default function PolicySettingsView() {
   const safetyScore = 98;
 
   useEffect(() => {
-    fetch('/api/policies')
-      .then(res => res.json())
+    apiClient.get('/api/policies')
       .then(data => {
         if (data.policies) setPolicies(prev => ({ ...prev, ...data.policies }));
-      });
+      })
+      .catch(() => {});
   }, []);
 
   const handleSavePolicies = async (updatedPolicies = policies) => {
@@ -37,20 +38,12 @@ export default function PolicySettingsView() {
     setSaved(false);
 
     try {
-      const res = await fetch('/api/policies', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedPolicies)
-      });
-      const data = await res.json();
-      if (data.policies) {
-        setPolicies(prev => ({ ...prev, ...data.policies }));
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      }
+      await apiClient.post('/api/policies', updatedPolicies);
+      setLoading(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error(err);
-    } finally {
       setLoading(false);
     }
   };

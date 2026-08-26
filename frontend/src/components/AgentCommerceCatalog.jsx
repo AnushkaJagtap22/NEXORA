@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Download, Edit2, Trash2, X, Check, Code, ShieldCheck, Sparkles, Wand2, Archive, RefreshCw, AlertTriangle } from 'lucide-react';
+import { apiClient } from '../api/apiClient';
 
 export default function AgentCommerceCatalog() {
   const navigate = useNavigate();
@@ -22,25 +23,23 @@ export default function AgentCommerceCatalog() {
   const [formData, setFormData] = useState({ name: '', price: '', stock: 25, category: 'Audio', description: '', status: 'ACTIVE' });
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchProducts = () => {
+  const fetchProducts = async () => {
     setLoading(true);
     let url = `/api/products?search=${encodeURIComponent(searchTerm)}`;
     if (categoryFilter !== 'ALL') url += `&category=${encodeURIComponent(categoryFilter)}`;
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        let prods = data.products || [];
-        if (statusFilter !== 'ALL') {
-          prods = prods.filter(p => p.status === statusFilter);
-        }
-        setProducts(prods);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
+    try {
+      const data = await apiClient.get(url);
+      let prods = data.products || [];
+      if (statusFilter !== 'ALL') {
+        prods = prods.filter(p => p.status === statusFilter);
+      }
+      setProducts(prods);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -55,16 +54,11 @@ export default function AgentCommerceCatalog() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-          stock: parseInt(formData.stock)
-        })
+      const data = await apiClient.post('/api/products', {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock)
       });
-      const data = await res.json();
       setSubmitting(false);
 
       if (data.success && data.product) {
@@ -84,16 +78,11 @@ export default function AgentCommerceCatalog() {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`/api/products/${selectedProduct.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-          stock: parseInt(formData.stock)
-        })
+      const data = await apiClient.put(`/api/products/${selectedProduct.id}`, {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock)
       });
-      const data = await res.json();
       setSubmitting(false);
 
       if (data.success) {
@@ -109,11 +98,7 @@ export default function AgentCommerceCatalog() {
   const handleToggleStatus = async (id, currentStatus) => {
     const nextStatus = currentStatus === 'ACTIVE' ? 'ARCHIVED' : 'ACTIVE';
     try {
-      await fetch(`/api/products/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
-      });
+      await apiClient.patch(`/api/products/${id}/status`, { status: nextStatus });
       fetchProducts();
     } catch (err) {
       console.error(err);

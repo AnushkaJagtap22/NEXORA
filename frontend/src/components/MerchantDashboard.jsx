@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, ShoppingBag, DollarSign, Activity, AlertTriangle, ArrowRight, ShieldAlert, CheckCircle2, ChevronRight, RefreshCw, BarChart2 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import { apiClient } from '../api/apiClient';
 
 export default function MerchantDashboard() {
   const navigate = useNavigate();
@@ -25,8 +26,7 @@ export default function MerchantDashboard() {
   const fetchPerformance = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/analytics/performance?range=${timeRange}&metric=${selectedMetric}`);
-      const data = await res.json();
+      const data = await apiClient.get(`/api/analytics/performance?range=${timeRange}&metric=${selectedMetric}`);
       if (data.points) setAnalyticsData(data);
     } catch (err) {
       console.error(err);

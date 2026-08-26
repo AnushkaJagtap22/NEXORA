@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ShoppingBag, Search, X, CheckCircle2, Play, AlertCircle, ArrowRight, Pause, PackageCheck, Clock, ShieldCheck, ShoppingCart, UserCheck } from 'lucide-react';
+import { apiClient } from '../api/apiClient';
 
 export default function OrdersView() {
   const location = useLocation();
@@ -20,13 +21,9 @@ export default function OrdersView() {
 
   useEffect(() => {
     setLoading(true);
-    const token = localStorage.getItem('nexora_token');
     const endpoint = isMerchantView ? '/api/merchant/orders' : isAdminView ? '/api/orders' : '/api/buyer/orders';
 
-    fetch(endpoint, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
+    apiClient.get(endpoint)
       .then(data => {
         if (data.orders) {
           const mappedOrders = data.orders.map((ord, idx) => ({

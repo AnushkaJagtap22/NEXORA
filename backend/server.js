@@ -202,6 +202,87 @@ function generateTokenPair(user) {
   return { accessToken, refreshToken };
 }
 
+// ----------------------------------------------------
+// AUTHENTICATION REST APIs (DEMO LOGIN + PRODUCTION JWT)
+// ----------------------------------------------------
+app.post('/api/auth/demo-login', (req, res) => {
+  const { role = 'MERCHANT' } = req.body;
+  const targetRole = role === 'AI_BUYER' || role === 'BUYER' ? 'AI_BUYER' : (role === 'ADMIN' ? 'ADMIN' : 'MERCHANT');
+  const user = DEMO_USERS[targetRole] || DEMO_USERS.MERCHANT;
+
+  const { accessToken, refreshToken } = generateTokenPair(user);
+
+  res.cookie('nexora_access_token', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 15 * 60 * 1000
+  });
+
+  return res.json({
+    success: true,
+    token: accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      merchantId: user.merchantId,
+      buyerId: user.buyerId,
+      businessName: user.businessName,
+      avatar: user.avatar
+    }
+  });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { email, password, role } = req.body;
+
+  let targetRole = 'MERCHANT';
+  if (role) {
+    targetRole = role === 'AI_BUYER' || role === 'BUYER' ? 'AI_BUYER' : (role === 'ADMIN' ? 'ADMIN' : 'MERCHANT');
+  } else if (email) {
+    if (email.includes('buyer')) targetRole = 'AI_BUYER';
+    else if (email.includes('admin')) targetRole = 'ADMIN';
+  }
+
+  const user = DEMO_USERS[targetRole] || DEMO_USERS.MERCHANT;
+  const { accessToken, refreshToken } = generateTokenPair(user);
+
+  res.cookie('nexora_access_token', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 15 * 60 * 1000
+  });
+
+  return res.json({
+    success: true,
+    token: accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      merchantId: user.merchantId,
+      buyerId: user.buyerId,
+      businessName: user.businessName,
+      avatar: user.avatar
+    }
+  });
+});
+
+app.get('/api/auth/me', authenticateUser, (req, res) => {
+  return res.json({ success: true, user: req.user });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('nexora_access_token');
+  return res.json({ success: true, message: 'Logged out successfully.' });
+});
+
 // Middleware: Authenticate User with Token Expiration & Cookie Support
 function authenticateUser(req, res, next) {
   let token = req.cookies.nexora_access_token;

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Target, Plus, Play, Pause, AlertCircle, CheckCircle2, TrendingUp, Users, DollarSign, Calendar, Tag, ShieldAlert } from 'lucide-react';
+import { apiClient } from '../api/apiClient';
 
 export default function CampaignOrchestratorView() {
   const [campaigns, setCampaigns] = useState([]);
@@ -19,8 +20,7 @@ export default function CampaignOrchestratorView() {
 
   const fetchCampaigns = async () => {
     try {
-      const res = await fetch('/api/campaigns');
-      const data = await res.json();
+      const data = await apiClient.get('/api/campaigns');
       if (data.campaigns) setCampaigns(data.campaigns);
     } catch (err) {
       console.error(err);
@@ -36,11 +36,7 @@ export default function CampaignOrchestratorView() {
   const handleCreateCampaign = async (e) => {
     e.preventDefault();
     try {
-      await fetch('/api/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
+      await apiClient.post('/api/campaigns', formData);
       setShowCreateModal(false);
       fetchCampaigns();
     } catch (err) {
@@ -51,11 +47,7 @@ export default function CampaignOrchestratorView() {
   const handleToggleStatus = async (id, currentStatus) => {
     const nextStatus = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
     try {
-      await fetch(`/api/campaigns/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
-      });
+      await apiClient.patch(`/api/campaigns/${id}/status`, { status: nextStatus });
       fetchCampaigns();
     } catch (err) {
       console.error(err);

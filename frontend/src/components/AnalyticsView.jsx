@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, BarChart3, ShieldCheck, Zap, ArrowUpRight, Award, Beaker, Tag, BrainCircuit } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { apiClient } from '../api/apiClient';
 
 export default function AnalyticsView() {
   const [loading, setLoading] = useState(true);
@@ -9,23 +10,20 @@ export default function AnalyticsView() {
   const [strategyStats, setStrategyStats] = useState(null);
 
   useEffect(() => {
-    fetch('/api/analytics/baseline-comparison')
-      .then(res => res.json())
+    apiClient.get('/api/analytics/baseline-comparison')
       .then(data => {
         setComparisonData(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
-    fetch('/api/recommendations/analytics')
-      .then(res => res.json())
+    apiClient.get('/api/recommendations/analytics')
       .then(data => {
         if (data.conversionRate) setRecMetrics(data);
       })
       .catch(() => {});
 
-    fetch('/api/negotiation/memory')
-      .then(res => res.json())
+    apiClient.get('/api/negotiation/memory')
       .then(data => {
         if (data.strategies) setStrategyStats(data);
       })
