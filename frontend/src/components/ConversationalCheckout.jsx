@@ -85,17 +85,6 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     }
   };
 
-  useEffect(() => {
-    fetchCart();
-    fetchProducts();
-
-    const params = new URLSearchParams(window.location.search);
-    const initialQuery = params.get('q');
-    if (initialQuery) {
-      handleExecutePromptQuery(initialQuery);
-    }
-  }, [searchTerm, selectedCategory]);
-
   const handleExecutePromptQuery = async (promptText) => {
     setLoading(true);
     setSearchTerm(promptText);
@@ -140,6 +129,17 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCart();
+    fetchProducts();
+
+    const params = new URLSearchParams(window.location.search);
+    const initialQuery = params.get('q');
+    if (initialQuery) {
+      handleExecutePromptQuery(initialQuery);
+    }
+  }, [searchTerm, selectedCategory]);
 
   const handleSendMessage = async (customText = null) => {
     const text = customText || inputMsg;
