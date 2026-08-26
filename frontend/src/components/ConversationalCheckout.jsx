@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Star, Check, UserCheck, Layers, TrendingUp, Zap, CheckCircle2, ArrowRight, Search, Plus, Minus, Trash2, Eye, X, Tag, ShoppingCart, ShieldCheck, Sparkles, MessageSquare, ChevronRight, PackageCheck, Gift, Award, Flame, Compass, Monitor } from 'lucide-react';
 import RazorpayModal from './RazorpayModal';
+import { getApiUrl } from '../config/apiConfig';
 
 export default function ConversationalCheckout({ onTriggerPayment }) {
   const navigate = useNavigate();
@@ -19,8 +20,9 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     discountPercent: 0,
     discountAmount: 0,
     warrantyAdded: false,
-    warrantyAmount: 0,
-    total: 4499
+    warrantyPrice: 499,
+    shippingFee: 0,
+    finalTotal: 4499
   });
 
   const [recommendations, setRecommendations] = useState([]);
@@ -29,24 +31,10 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const [messages, setMessages] = useState([
     {
-      sender: 'user',
-      text: 'I need wireless headphones under ₹5,000 for travel.',
-      timestamp: '12:42 PM'
-    },
-    {
       sender: 'bot',
-      text: 'I found 4 great wireless headphones under ₹5,000 with Active Noise Cancellation.',
-      timestamp: '12:42 PM',
-      actionLogs: ['Searching catalog... ✓ Found 4 matches', 'Checking availability... ✓ In stock'],
-      productResult: {
-        id: 'prod_002',
-        name: 'Wireless Headphones Pro',
-        price: 4499,
-        stock: 42,
-        rating: 4.8,
-        matchScore: 92,
-        reasons: ['Within budget (₹4,499)', 'Active Noise Cancellation (ANC)', 'Currently in stock']
-      }
+      text: 'Hi! Tell me what you are looking for today. For example: "I need wireless headphones under ₹5,000" or "Build me a coding setup under ₹50,000".',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      actionLogs: ['System Ready • Mistral AI Multi-Signal Intent Parser', 'SQLite Catalog Dynamic Product Ranking']
     }
   ]);
 
@@ -61,7 +49,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const fetchCart = async () => {
     try {
-      const res = await fetch('/api/cart');
+      const res = await fetch(getApiUrl('/api/cart'));
       const data = await res.json();
       if (data.cart) {
         setCartState(data.cart);
@@ -74,7 +62,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch(`/api/products?search=${encodeURIComponent(searchTerm)}&category=${selectedCategory}`);
+      const res = await fetch(getApiUrl(`/api/products?search=${encodeURIComponent(searchTerm)}&category=${selectedCategory}`));
       const data = await res.json();
       if (data.products) setProducts(data.products);
     } catch (err) {
@@ -84,7 +72,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const fetchRecommendations = async (subtotal, items) => {
     try {
-      const res = await fetch('/api/recommendations/contextual', {
+      const res = await fetch(getApiUrl('/api/recommendations/contextual'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: items[0]?.id || 'prod_002', cartItems: items, cartSubtotal: subtotal })
@@ -118,7 +106,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     setProducts([]);
 
     try {
-      const res = await fetch('/api/ai-shopping/query', {
+      const res = await fetch(getApiUrl('/api/ai-shopping/query'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: promptText })
@@ -167,7 +155,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
       const reqDisc = match ? parseInt(match[1]) : 15;
 
       try {
-        const res = await fetch('/api/agent/negotiate', {
+        const res = await fetch(getApiUrl('/api/agent/negotiate'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ requestedDiscount: reqDisc, amount: cartState.subtotal })
@@ -209,7 +197,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const handleSelectProduct = async (prodId) => {
     try {
-      await fetch('/api/cart/add', {
+      await fetch(getApiUrl('/api/cart/add'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: prodId, quantity: 1 })
@@ -224,7 +212,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
     if (!activeBundle || !activeBundle.products) return;
     try {
       for (const prod of activeBundle.products) {
-        await fetch('/api/cart/add', {
+        await fetch(getApiUrl('/api/cart/add'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productId: prod.id, quantity: 1 })
@@ -238,7 +226,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const handleUpdateQuantity = async (prodId, newQty) => {
     try {
-      await fetch('/api/cart/item', {
+      await fetch(getApiUrl('/api/cart/item'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: prodId, quantity: newQty })
@@ -251,7 +239,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const acceptPermittedDiscount = async (maxDisc) => {
     try {
-      await fetch('/api/cart/update', {
+      await fetch(getApiUrl('/api/cart/update'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discountPercent: maxDisc })
@@ -265,7 +253,7 @@ export default function ConversationalCheckout({ onTriggerPayment }) {
 
   const toggleSmartBundle = async () => {
     try {
-      await fetch('/api/cart/update', {
+      await fetch(getApiUrl('/api/cart/update'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ warrantyAdded: !cartState.warrantyAdded })

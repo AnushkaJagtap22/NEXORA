@@ -235,10 +235,10 @@ function requireMerchantIsolation(req, res, next) {
 }
 
 // ----------------------------------------------------
-// DYNAMIC AI SHOPPING QUERY API (NO STATIC HARDCODING)
+// DYNAMIC AI SHOPPING QUERY API (CANONICAL + ALIASES)
 // ----------------------------------------------------
-app.post('/api/ai-shopping/query', async (req, res) => {
-  const { message = '' } = req.body;
+const handleShoppingQuery = async (req, res) => {
+  const message = req.body?.message || req.query?.q || req.query?.message || '';
   try {
     const result = await AgentPlanner.executePlannerLoop(message);
     return res.json(result);
@@ -253,7 +253,14 @@ app.post('/api/ai-shopping/query', async (req, res) => {
       aiExplanation: 'Unable to search the catalog right now. Please try again.'
     });
   }
-});
+};
+
+app.post('/api/ai-shopping/query', handleShoppingQuery);
+app.get('/api/ai-shopping/query', handleShoppingQuery);
+app.post('/api/query', handleShoppingQuery);
+app.get('/api/query', handleShoppingQuery);
+app.post('/query', handleShoppingQuery);
+app.get('/query', handleShoppingQuery);
 
 // ----------------------------------------------------
 // REAL CAMPAIGN ENGINE REST APIs (SQLITE INTEGRATED)
