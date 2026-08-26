@@ -1,0 +1,20 @@
+{
+  "name": "recoverx-backend",
+  "version": "1.0.0",
+  "description": "RecoverX - Autonomous AI Revenue Recovery & Agentic Commerce Backend API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^13.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
+    "uuid": "^9.0.1"
+  }
+}
